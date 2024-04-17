@@ -1,82 +1,42 @@
 //create a web server
+//create a web server
 const express = require('express');
-const bodyParser = require('body-parser');
-const path = require('path');
 const app = express();
-//parse incoming request
+const port = process.env.PORT || 3000;
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
+const comments = require('./comments');
+//const comments = require('./comments');
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, 'public')));
-//set up the database
-const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost/comments');
-const Comment = require('./models/comment');
-//set up the port
-const port = 3000;
-app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
-});
-//set up the routing
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'views/index.html'));
-});
+app.use(cookieParser());
+app.use(express.static('public'));
+// app.get('/', (req, res) => {
+//   res.send('Hello World!');
+// });
+
 app.get('/comments', (req, res) => {
-    Comment.find({}, (err, comments) => {
-        if (err) {
-            console.log(err);
-        } else {
-            res.json(comments);
-        }
-    });
+  comments.getComments((err, comments) => {
+    if (err) {
+      res.status(500).send('Internal Server Error');
+    } else {
+      res.json(comments);
+    }
+  });
 });
+
 app.post('/comments', (req, res) => {
-    const newComment = new Comment({
-        name: req.body.name,
-        comment: req.body.comment
-    });
-    newComment.save((err, comment) => {
-        if (err) {
-            console.log(err);
-        } else {
-            console.log(comment);
-            res.redirect('/');
-        }
-    });
+  const comment = req.body.comment;
+  comments.addComment(comment, (err, newComment) => {
+    if (err) {
+      res.status(500).send('Internal Server Error');
+    } else {
+      res.status(201).json(newComment);
+    }
+  });
 });
-app.get('/comments/:id', (req, res) => {
-    Comment.findById(req.params.id, (err, comment) => {
-        if (err) {
-            console.log(err);
-        } else {
-            res.json(comment);
-        }
-    });
+
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
-app.put('/comments/:id', (req, res) => {
-    Comment.findByIdAndUpdate(req.params.id, { $set: req.body }, (err, comment) => {
-        if (err) {
-            console.log(err);
-        } else {
-            res.json(comment);
-        }
-    });
-});
-app.delete('/comments/:id', (req, res) => {
-    Comment.findByIdAndRemove(req.params.id, (err, comment) => {
-        if (err) {
-            console.log(err);
-        } else {
-            res.json(comment);
-        }
-    });
-});
-// Path: models/comment.js
-//create a schema
-const mongoose = require('mongoose');
-const commentSchema = new mongoose.Schema({
-    name: String,
-    comment: String
-});
-//create a model
-const Comment = mongoose.model('Comment', commentSchema);
-module
+
+module.exports = app;
