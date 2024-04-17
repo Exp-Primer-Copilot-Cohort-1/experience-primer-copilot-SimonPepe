@@ -1,5 +1,4 @@
-//create a web server
-//create a web server
+//Create a web server
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
